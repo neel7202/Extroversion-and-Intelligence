@@ -1,0 +1,277 @@
+---
+title: "Final Project: The Relationship Between Personality and Intelligence"
+author: "Neel Mirani"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+    rmdformats::downcute:
+    theme: readthedown
+    highlight: tango
+    toc: yes
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(kableExtra)
+library(rmdformats)
+
+```
+# Introduction to Differences in Intelligence:
+
+While reading "Naked Statistics" by Charles Wheelan, I discovered that the correlation between the SAT composite score and first-year college GPA is 0.56. In comparison, the correlation between height and weight for adult men in the United States is about 0.4. This showed to me the strength of the correlation between SAT scores and college GPA because height and weight are very correlated and their correlation coefficient is lower than that of SAT and first year college GPA. I interpreted from this that SAT scores and GPA are likely correlated because they both measure intelligence. This makes sense as generally speaking, if somebody is intelligent, they will likely perform well the SAT and also have a high GPA. As a result, throughout this research, I measure intelligence using SAT scores and GPA.
+
+An additional motivation to this research was watching Dr. Jordan Peterson explain the disturbing yet thoroughly researched fact that on average, different groups of people have varying levels of intelligence, whether the groups be divided by race, gender, ethnicity, etc. However, one thing Dr. Peterson did not discuss was the association between personality type and intelligence. I decided to pursue this idea as my research project to see if there was some sort of correlation between personality type (extroversion vs introversion) and intelligence (measured by SAT score). I kept in mind the research Dr. Peterson alluded to, specifically about gender differences in intelligence, and decided to do read further into this. I found the study 'IQ Testing' which acknowledged the gender differences in intelligence (Sternberg, 2010). As a result, I decided to group my original data by gender to control for this potential confounding variable. I then branched out using risk aversion to measure personality type and GPA to measure intelligence. 
+
+While considering my initial hypothesis, I decided to perform some background research. I found that there were not many studies conducted to investigate the correlation between extroversion and intelligence, but did find the following meaningful graphic from MIDUS. 
+
+![Image](C:\Users\neel7\OneDrive\Documents\Econ220\Extraversion vs IQ.png)
+From this graphic, we can see that there does not seem to be any correlation between extroversion and IQ (a measure of intelligence). As extroversion levels increase, IQ stays constant. However, according to [Lesley Sword](http://highability.org/the-gifted-introvert/#:~:text=However%2C%20while%20introverts%20are%20a,IQ%20above%20160%20are%20introverted.), despite introverts being a minority, 75% of people with an IQ above 160 are introverted.
+
+With these conflicting data, I decided to take a deeper physiological look into the difference between introverts and extroverts. I discovered this [research article](https://www.jneurosci.org/content/32/50/18087.short) that found that introverts tend to have thicker gray matter in certain areas of the prefrontal cortex when compared to extroverts (Holmes, 2012). This hints that on average introverts devote more neural resources to abstract thinking whereas extroverts tend to live more in the moment. 
+
+Based off of these facts, my null hypothesis is that there will be no significant difference in intelligence by personality type, and my alternative hypothesis is that there is a significant difference in intelligence by personality type. However, I measure intelligence and personality in several ways, so as a result, I have multiple sets of hypotheses and tests.
+
+Null Hypothesis 1: There is no significant relationship between extroversion and SAT scores. 
+
+Alternative Hypothesis 1: There is a significant relationship between extroversion and SAT scores. 
+
+Null Hypothesis 2: There is no significant relationships between risk tolerance and SAT scores.
+
+Alternative Hypothesis 2: There is a significant relationship between risk tolerance and SAT scores.
+
+Null Hypothesis 3: There is no significant relationship between risk tolerance and GPA. 
+
+Alternative Hypothesis 3: There is a significant relationship between risk tolerance and GPA. 
+
+# The Econ220 Lab Dataset: 
+
+The data set I used is from a survey filled out by Econn 220 Laboratory Class with Professor Paloma Lopez de Mesa Moyano. There were a total of 139 respondents. This data is adequate to answer my research question because answering the questions did not in any way contradict personal interests such as class grade. 
+
+I do have one crucial note about my data: because there are multiple test exam formats (Old SAT, New SAT, ACT) and each exam is out of a different total, I decided to represent Test Scores as the proportion of total possible points that were amassed. In other words, Test Score = (raw score)/(total possible raw score). By doing this, I was able to make all test formats comparable and graphable on one y axis. It is important to note I did this for all of the following graphs that involved test scores. The process is shown below.
+
+```{r, results = 'hide'}
+Econ220Data <- read_csv("Econ220DataF20_ano.csv") # loads data
+Econ220Data
+
+# Isolates column with test scores and stores it in propScore
+propScore <- Econ220Data %>%
+  select(q44) 
+
+propScore <- lapply(propScore, as.numeric)
+propScoredf <- data.frame(propScore)
+
+# Code to normalize data from different test formats: test scores are proportions of total possible points
+for(i in seq(1, 138, 1)){
+  if (is.na(propScoredf[i, 1]) == FALSE && propScoredf[i, 1] < 37)
+  {
+    propScoredf[i, 1] <- propScoredf[i, 1]/36
+  }
+  else if (is.na(propScoredf[i, 1]) == FALSE && propScoredf[i, 1] < 1601)
+  {
+    propScoredf[i, 1] <- propScoredf[i, 1]/1600
+  }
+  else if (is.na(propScoredf[i, 1]) == FALSE && propScoredf[i, 1] < 2401)
+  {
+    propScoredf[i, 1] <- propScoredf[i, 1]/2400
+  }
+  else{
+    propScoredf[i, 1] <- NA
+  }
+}
+
+  data20 <- Econ220Data %>%
+  select(q17, q44) %>%      # selecting variables that reveal extrovert/introvert and test score
+  rename(personality = q17, testScore = q44)  %>%  # renames column headers
+  cbind(propScoredf)%>%     # Adds propScoredf as a column in data20
+  group_by(personality) %>% # groups by personality to form two mutually exclusive and collectively exhaustive groups
+  summarize(avgtestScore = round(mean(q44, na.rm = TRUE), 3)) # gets average test score for each group
+  
+  data20.2 <- Econ220Data %>%
+  select(sex, q17, q44) %>%  # selecting variables that reveal sex, extroversion, and test score
+  rename(personality = q17, testScore = q44)  %>%  # renames column headers
+  cbind(propScoredf)%>%      # Adds propScoredf as a column in data20.2
+  group_by(sex, personality) # groups by sex and personality to form four mutually exclusive and collectively exhaustive 
+  
+  data20.3 <- Econ220Data %>%
+  select(q45, q59) %>%                      # selecting variables that reveal risk aversion and GPA
+  rename(personality = q59, GPA = q45)%>%   # renames column headers
+  cbind(propScoredf) %>%                    # Adds propScoredf as a column in data20.3
+  filter(personality == "Risk Averse" | personality == "Risk Lover") %>%    # Filters out those who feel "in the middle"
+  group_by(personality) %>%                 # groups by risk tolerance
+  summarize(AvgTestScore = round(mean(q44, na.rm = T),3), AvgGPA = round(mean(GPA), 3)) #Gets Average test score and GPA for each group
+  
+  data20.4 <- Econ220Data %>%
+  select(q45, q59) %>%                      # selecting variables that reveal risk aversion and GPA
+  rename(personality = q59, GPA = q45)  %>% # renames column headers
+  cbind(propScoredf) %>%                    # Adds propScoredf as a column in data20.4
+  filter(personality == "Risk Averse" | personality == "Risk Lover") %>%   # Filters out those who feel "in the middle"
+  group_by(personality)
+```
+## Summary Stats and Graph 1: Measuring Extroversion against Intelligence
+```{r}
+# Creates styled table demonstrating test scores by extroversion
+kable(data20, digits=3, col.names=c("Personality Type", "Avg Test Score")) %>% kable_styling(bootstrap_options = "striped", full_width = F)
+
+#Creates styled barplot graph demonstrating test scores by extroversion
+ggplot(data20, aes(x=personality, y = avgtestScore, label = avgtestScore)) + geom_col(fill = "lightgreen") + geom_text(size=7, fontface=2, color="red", position = position_stack(vjust = 0.5)) + ylab("Average Test Score") + xlab("Personality Type") + ggtitle("Test Scores by Personality Type")
+```
+
+This first graph is a bar graph with the x axis representing personality type (extrovert vs introvert), and the y axis representing Average Test Score. This graph shows me that there is only a 0.01 proportional or 1 percent difference between the test scores of Extroverts and Introverts, with Extroverts having the higher average score. This will be further analyzed in the following data visualization.
+
+## Summary Stats and Graph 2: Measuring Extroversion against Intelligence, controlling for gender differences
+```{r}
+# Creates boxplot showing the spread of test scores for extroversion, controlling for sex
+ ggplot(data20.2, aes(y = q44, x = personality, color = personality)) + geom_boxplot() + facet_wrap(~sex) +
+    labs(title = "Test Scores by Personality and Gender", color = "Personality") + ylab("Average Test Score") + xlab("Personality Type")
+```
+
+As I mentioned in the introduction, there is research that supports the existence of gender differences in intelligence. As a result, I decided to further group graph 1 data by sex in order to account for this potential confounding variable. These box plots show to me a higher median test score on average for extroverts for both males and females. Because these trends and even values are very similar in this data set, gender does not appear to be a confounding variable. As a result, when measuring for a statistically significant difference between Extrovert/Introvert test scores later on, I will not have to account for gender. 
+
+## Summary Stats and Graphs 3/4: Measuring Risk Tolerance against Intelligence
+```{r}
+# Creates styled table demonstrating average test score and average GPA by risk tolerance
+  kable(data20.3, digits=3, col.names=c("Personality Type", "Avg Test Score", "Avg GPA")) %>% kable_styling(bootstrap_options = "striped",   full_width = F)       
+  
+# Creates bar plot demonstrating average test score by risk tolerance
+  ggplot(data20.3, aes(x=personality, y = AvgTestScore, label = AvgTestScore)) + geom_col(fill = "lightgreen") + geom_text(size=7,          fontface=2, color="red", position = position_stack(vjust = 0.5)) + ylab("Average Test Score") + xlab("Personality Type") + ggtitle("Test Scores by Personality Type")
+  
+# Creates bar plot demonstrating average GPA by risk tolerance
+  ggplot(data20.3, aes(x = personality, y = AvgGPA, label = AvgGPA)) + geom_col(fill = "lightgreen") + geom_text(size=7,          fontface=2, color="red", position = position_stack(vjust = 0.5)) + ylab("Average GPA") + xlab("Personality Type") + ggtitle("Test Scores by Personality Type")
+
+```
+
+For these graphs, I looked into a different metrics for measuring personality: risk aversion. I found that when compared against risk loving individuals, risk averse individuals had higher GPAs and test scores on average. The distribution of their scores will be analyzed below using boxplots.
+
+## Summary Stats and Graphs 5/6: Continuing to Measure Risk Tolerance against Intelligence
+```{r}
+# Creates Violin Plot showing the spread of test scores by risk tolerance
+ggplot(data20.4, aes(y = q44, x = personality, fill = personality, color - personality)) + 
+  geom_violin( alpha = 0.5) + scale_color_manual(values = c("purple", "green")) +
+   scale_fill_manual(values = c("purple", "green"))+
+labs(title="SAT distribution by Risk Aversion -  Violin Plot") +
+   theme(plot.title = element_text(hjust = 0.5)) + theme_classic() + ylab("Average Test Score") + xlab("Personality Type")
+ 
+# Creates Violing Plot showing the spread of GPA by risk tolerance
+ggplot(data20.4, aes(y = GPA, x = personality, fill = personality, color - personality)) + 
+  geom_violin( alpha = 0.5) + scale_color_manual(values = c("purple", "green")) +
+   scale_fill_manual(values = c("purple", "green"))+
+labs(title="GPA distribution by Risk Aversion -  Violin Plot") +
+   theme(plot.title = element_text(hjust = 0.5)) + theme_classic() + ylab("Average GPA") + xlab("Personality Type")
+```
+
+In order to better see the distribution of the data, I decided to graph violin plots measuring average SAT scores and GPAs for each group. What I found was very interesting. Although the median for SAT scores was very close for risk averse and risk loving students on average, the test scores were much more spread out for risk loving individuals. This can be seen by the enormous shape of the plot for risk averse students at its median when compared to Risk Loving students. This made sense to me as risk averse students are less likely to take risks in preparation for the exam, and as a result their consistent preparation lead to more consistent SAT scores. A similar trend held for risk tolerance in relation to GPA but with a larger difference in medians. This can be seen by the  narrower and lengthier distribution for risk lovers. Moreover, the plot for risk lovers extends much lower on the y axis demonstrating a greater range and the plot is not nearly as wide at the GPA of 4.0. This increase in variability for risk lovers makes sense to me as with greater risk-tolerance comes greater differences in results. 
+
+# Analyzing data using t-tests, confidence intervals, and pie charts
+
+Here I analyze my data by doing a t-test of means and creating informative pie charts.
+```{r}
+# Preparing data20 for t-test
+data20 <- Econ220Data %>%
+  select(q17, q44) %>% 
+  rename(personality = q17, testScore = q44) %>% 
+  cbind(propScoredf)
+
+# Preparting data20.3 for t-test
+data20.3 <- Econ220Data %>%
+  select(q45, q59) %>%                      
+  rename(personality = q59, GPA = q45)%>%   
+  cbind(propScoredf) %>%                    
+  filter(personality == "Risk Averse" | personality == "Risk Lover")   
+ 
+#Preparing data 20.4 for t-test
+data20.4 <- Econ220Data %>%
+  select(q45, q59) %>%  
+  rename(personality = q59, GPA = q45)  %>% 
+  cbind(propScoredf) %>%
+  filter(personality == "Risk Averse" | personality == "Risk Lover") 
+
+# testing Extrovesion against SAT scores
+t.test(q44 ~ personality, data = data20)
+# Testing Risk Aversion against SAT scores
+t.test(q44 ~ personality, data = data20.3)
+# Testing Risk Aversion against GPA
+t.test(GPA ~ personality, data = data20.4)
+
+# Preparing data and creating pie chart representing extroversion vs introversion and highest test scores
+data20 %>%
+  filter(propScoredf > 0.95) %>%
+  group_by(personality)%>%
+  summarize(prop = n()/19)%>%
+  ggplot(aes(x = "", y = prop, fill = personality)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar("y", start = 0)+
+  geom_text(aes(label = round(prop, 3)), color = "white", position = position_stack(vjust = 0.5)) +
+  theme_void() + ggtitle("Pie chart representing Extroversion spread for test scores over 0.95")
+
+data20.3 <- Econ220Data
+
+# Preparing data and creating Pie chart representing risk tolerance and high test scores
+data20.3 %>%
+  select(q45, q59) %>%                      
+  rename(personality = q59, GPA = q45)%>%   
+  cbind(propScoredf) %>%
+  filter(propScoredf > 0.95) %>%
+  filter(personality == "Risk Averse" | personality == "Risk Lover")%>%
+  group_by(personality) %>%
+  summarize(prop = n()/9)%>%
+  ggplot(aes(x = "", y = prop, fill = personality)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar("y", start = 0)+
+  geom_text(aes(label = round(prop, 3)), color = "white", position = position_stack(vjust = 0.5)) +
+  theme_void() + ggtitle("Pie chart representing Risk Tolerance spread for test scores over 0.95")
+
+# Preparing data and creating Pie chart representing risk aversion of 4.0 GPAs
+data20.4 %>%
+  filter(GPA == 4.0) %>%
+  group_by(personality) %>%
+  summarize(prop = n()/15)%>%
+  ggplot(aes(x = "", y = prop, fill = personality)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar("y", start = 0)+
+  geom_text(aes(label = round(prop, 3)), color = "white", position = position_stack(vjust = 0.5)) +
+  theme_void() + ggtitle("Pie chart representing Risk Tolerance spread for 4.0 GPAs") 
+```
+
+### Extroversion and Intelligence
+
+Based on the first t-test performed, I received a p-value of 0.1884. 0.1884 is larger than 0.05 (alpha) so I can fail to reject null hypothesis 1 with 95% confidence and conclude that there is no significant relationship between extroversion and SAT scores. This is further supported by the confidence interval which states that the real difference between the average test score between extroverts and introverts is a number between -0.005126106 and 0.025773445 with 95% confidence. Because 0 is included in this range, it is possible that there is no difference between the two groups.
+
+A similar t-test was performed for the second personality metric: risk aversion. In the end, I received a p value of 0.8669. 0.8669 is larger than 0.05 (alpha) so I can fail to reject null hypothesis 2 with 95% confidence and conclude that there is no significant relationships between willingness to take risk and SAT scores. This is further supported by the confidence interval which states that the real difference between the average test score between risk averse individuals and risk lovers is a number between -0.02273567 and 0.02686053 with 95% confidence. Because 0 is included in this range, it is possible that there is no difference between the two groups.
+
+A final t-test was performed for risk aversion and a second metric of intelligence: GPA. In the end, I received a p-value of 0.1849. 0.1849 is larger than 0.05 (alpha) so I can fail to reject null hypothesis 3 with 95% confidence and conclude that there is no significant relationship between willingness to take risk and GPA. This is further supported by the confidence interval which states that the real difference between the average GPA between risk averse individuls and risk lovers is a number between -0.04648439  0.23403018 with 95% confidence. Because 0 is included in this range, it is possible that there is no difference between the two groups.
+
+However, I do have a few takeaways that I would like to investigate further as a result of my data. Despite the data not reporting a significant difference in means and medians between extroverts vs introverts and risk-averse individuals vs risk-loving individuals, extroverts and risk-averse individuals tend to do be more clustered at the very top when compared to their counterparts. This can be seen by the pie charts. I would like to research this further in the future. 
+
+# Conclusion
+
+The goal of this project was to investigate the relationship between personality and intelligence. I decided to use extroversion and risk aversion as two separate metrics to measure personality and SAT scores and GPAs to measure intelligence.
+
+In every data visualization, extroverts had higher average intelligence than introverts and risk-averse members had higher average intelligence than risk-lovers. However, in the end, I found no significant relationship between personality and intelligence. 
+
+There were a few shortcomings to my data analysis. For one, intelligence is very difficult to measure. SAT scores and GPA are not only measuring intelligence, but also test-taking ability, attention span, and does not account for personal differences such as access to resources and time availability. As a result, GPA and SAT scores may not be to most accurate metric for intelligence.
+
+Moreover, personality types were self-reported in this study. Each person's idea of extroversion and risk-aversion is different, and a result the data is not completely objective. Also, in order to make oneself seem better, respondents may have inflated their SAT and GPA scores. This could potentially bias the data.
+
+I do think the results could have been different if I had a larger, more representative sample. I believe this to be the case because Emory University is a very selective university that already selects for high GPAs and proven grade getters. Regardless if an accepted student is an extrovert or introvert, they are very likely to have strong academic backgrounds. Because of this, if I were able to take a simple random sample of the population of the United States, I believe the results could have been different. It is possible that there is a significant relationship between personality and intelligence, but everyone at the amazing school of Emory University is only attended by geniuses and so personality seems to have no effect. 
+
+If I had to do the project again, I would...
+
+Control for family income: This would make my metrics of intelligence (SAT scores and GPA) measure intelligence to a greater degree. Wealthier families have access to greater school districts, SAT prep books, and greater connections. As a result, controlling for wealth by creating different groups would allow for a more accurate measure of intelligence.
+
+Have a better scale to measure extroversion: While answering the survey myself, I found it extremely difficult to identify with either being an introvert or extrovert. As a result, for that specific question, I would create a scale from 1 - 10 asking how extroverted the respondent is with 1 being 'extremely introverted' and 10 being 'extremely extroverted'. This would allow for a more precise metric of personality.  
+
+Send this survey to a more representative sample: At least to different classes to fully represent Emory outside of the Econ 220 Lab class. There are many more demographics at Emory besides the mathematically inclined Economics students such as art, music, or life science majors, and even athletes. Currently, I have the suspicion that most people in ECON 220 were strong academic students. If possible, I would like to reach out to other colleges in Georgia where test scores and GPAs are lower on average. This may allow me to see a relationship between personality and intelligence more clearly if it exists.
+
+# References
+
+Sternberg, Robert J. “IQ Testing.” The Cambridge Handbook of Psychology, Health and Medicine., 3rd Ed., edited by Carrie D. Llewellyn et al., Cambridge University Press, 2019, pp. 196–200. EBSCOhost, search.ebscohost.com/login.aspx?direct=true&db=psyh&AN=2017-50182-044&site=ehost-live&scope=site.
+
+Sword, L., 2020. The Gifted Introvert | High Ability. [online] High Ability. Available at: <https://highability.org/the-gifted-introvert/#:~:text=However%2C%20while%20introverts%20are%20a,IQ%20above%20160%20are%20introverted.> [Accessed 1 December 2020].
+
+Wheelan, Charles J. Naked Statistics: Stripping the Dread From the Data. New York: W.W. Norton, 2013.
+
+Holmes, A. J., et al. “Individual Differences in Amygdala-Medial Prefrontal Anatomy Link Negative Affect, Impaired Social Functioning, and Polygenic Depression Risk.” Journal of Neuroscience, vol. 32, no. 50, 2012, pp. 18087–100. Crossref, doi:10.1523/jneurosci.2531-12.2012.
